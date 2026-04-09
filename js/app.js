@@ -89,7 +89,8 @@ function renderHomeStats() {
   if (history.length === 0) { el.textContent = ''; return; }
   const totalKm  = history.reduce((s, e) => s + (e.distance || 0), 0);
   const wWord    = history.length === 1 ? 'trening' : history.length <= 4 ? 'treningi' : 'treningów';
-  el.textContent = `${history.length} ${wWord} · ${totalKm.toFixed(1)} km łącznie`;
+  const kmPart   = totalKm >= 0.1 ? ` · ${totalKm.toFixed(1)} km łącznie` : '';
+  el.textContent = `${history.length} ${wWord}${kmPart}`;
 }
 
 // ── iOS Install Banner ────────────────────────────────────────────────────────

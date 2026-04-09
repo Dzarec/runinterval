@@ -37,6 +37,11 @@ function renderHistoryScreen() {
   const list = document.getElementById('history-list');
   if (!list) return;
 
+  // Przywróć aktywny przycisk sortowania (może się zmienić po powrocie na ekran)
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sort === hist_sortOrder);
+  });
+
   const history = getSorted(window.Storage?.getHistory() || []);
 
   if (history.length === 0) {

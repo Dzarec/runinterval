@@ -7,7 +7,6 @@
 
 let voc_voice     = null;
 let voc_keepAlive = null;
-let voc_lastKm    = 0;   // ostatni ogłoszony kilometr (reset przy starcie)
 
 // ── Inicjalizacja ─────────────────────────────────────────────────────────────
 
@@ -55,7 +54,7 @@ function stopSpeechKeepAlive() {
   if (voc_keepAlive) { clearInterval(voc_keepAlive); voc_keepAlive = null; }
 }
 
-// ── Konwersja liczb na polskie słowa ─────────────────────────────────────────
+// ── Konwersja liczb na polskie słowa (0–999) ──────────────────────────────────
 
 const PL_NUMS = [
   'zero','jeden','dwa','trzy','cztery','pięć','sześć','siedem',
@@ -64,17 +63,34 @@ const PL_NUMS = [
   'dziewiętnaście','dwadzieścia',
 ];
 
+const PL_TENS = [
+  '','','dwadzieścia','trzydzieści','czterdzieści',
+  'pięćdziesiąt','sześćdziesiąt','siedemdziesiąt','osiemdziesiąt','dziewięćdziesiąt',
+];
+
+const PL_HUNDREDS = [
+  '','sto','dwieście','trzysta','czterysta',
+  'pięćset','sześćset','siedemset','osiemset','dziewięćset',
+];
+
 function numberToPolish(n) {
-  if (n <= 20)  return PL_NUMS[n];
-  if (n < 30)   return 'dwadzieścia ' + (n % 10 ? PL_NUMS[n % 10] : '');
-  if (n < 40)   return 'trzydzieści ' + (n % 10 ? PL_NUMS[n % 10] : '');
-  if (n < 50)   return 'czterdzieści ' + (n % 10 ? PL_NUMS[n % 10] : '');
-  if (n < 60)   return 'pięćdziesiąt ' + (n % 10 ? PL_NUMS[n % 10] : '');
+  n = Math.floor(n);
+  if (n < 0)   return String(n);
+  if (n <= 20) return PL_NUMS[n];
+  if (n < 100) {
+    const parts = [PL_TENS[Math.floor(n / 10)]];
+    if (n % 10) parts.push(PL_NUMS[n % 10]);
+    return parts.join(' ');
+  }
+  if (n < 1000) {
+    const parts = [PL_HUNDREDS[Math.floor(n / 100)]];
+    if (n % 100) parts.push(numberToPolish(n % 100));
+    return parts.join(' ');
+  }
   return String(n);
 }
 
 function paceToWords(paceStr) {
-  // "5:12" → "pięć minut dwanaście sekund"
   if (!paceStr || paceStr === '--:--') return '';
   const [min, sec] = paceStr.split(':').map(Number);
   const minWord = numberToPolish(min);
@@ -89,26 +105,40 @@ function minutesToWords(totalSec) {
   return `${numberToPolish(m)} minut`;
 }
 
+// ── Rzeczowniki ───────────────────────────────────────────────────────────────
+
+function kmNoun(n) {
+  if (n === 1)  return 'kilometr';
+  if (n <= 4)   return 'kilometry';
+  return 'kilometrów';
+}
+
+function mNoun(n) {
+  if (n === 1)  return 'metr';
+  if (n <= 4)   return 'metry';
+  return 'metrów';
+}
+
 // ── Komunikaty treningowe ─────────────────────────────────────────────────────
 
 function announceStart(workout) {
-  voc_lastKm = 0;
-  const warmupMin = Math.round((workout.warmup || 0) / 60);
-  speak(`Trening rozpoczęty. Rozgrzewka, ${minutesToWords(workout.warmup)}.`, true);
+  const warmupPart = workout.warmup > 0
+    ? ` Rozgrzewka, ${minutesToWords(workout.warmup)}.`
+    : '';
+  speak(`Trening rozpoczęty.${warmupPart}`, true);
 }
 
 function announcePhase(phase) {
   const msg = {
-    warmup:   null,   // ogłaszane przez announceStart
+    warmup:   null,
     fast:     'Start! Szybko!',
     slow:     'Zwolnij. Odpoczynek.',
-    cooldown: null,   // ogłaszane przez announceCooldown
+    cooldown: null,
   }[phase];
   if (msg) speak(msg, true);
 }
 
 function announceCooldown(workout) {
-  const m = Math.round((workout.cooldown || 0) / 60);
   speak(`Schładzanie. ${minutesToWords(workout.cooldown)}. Świetny trening!`, true);
 }
 
@@ -130,32 +160,28 @@ function announceFinish(distanceKm, durationSec) {
   const km  = Math.floor(distanceKm);
   const m   = Math.round((distanceKm - km) * 1000);
   const min = Math.floor(durationSec / 60);
-  const sec = durationSec % 60;
+  const sec = Math.floor(durationSec % 60);
 
   let distText = '';
   if (distanceKm >= 0.05) {
-    distText = `Dystans: ${numberToPolish(km)} kilometrów ${m > 0 ? numberToPolish(m) + ' metrów' : ''}.`;
+    const kmText = `${numberToPolish(km)} ${kmNoun(km)}`;
+    const mText  = m > 0 ? ` ${numberToPolish(m)} ${mNoun(m)}` : '';
+    distText = `Dystans: ${kmText}${mText}. `;
   }
 
+  const secPart = sec > 0 ? ` ${numberToPolish(sec)} sekund` : '';
   speak(
-    `Trening zakończony! ${distText} Czas: ${numberToPolish(min)} minut ${numberToPolish(sec)} sekund. Brawo!`,
+    `Trening zakończony! ${distText}Czas: ${numberToPolish(min)} minut${secPart}. Brawo!`,
     true
   );
   window.Sound?.VIBRATIONS?.finish();
 }
 
-function kmNoun(n) {
-  if (n === 1)       return 'kilometr';
-  if (n <= 4)        return 'kilometry';
-  return 'kilometrów';
-}
-
 function announceKilometer(km, paceStr) {
-  const kmWord   = numberToPolish(km);
   const paceWord = paceToWords(paceStr);
   const text = paceWord
-    ? `${kmWord} ${kmNoun(km)}. Tempo: ${paceWord}.`
-    : `${kmWord} ${kmNoun(km)}.`;
+    ? `${numberToPolish(km)} ${kmNoun(km)}. Tempo: ${paceWord}.`
+    : `${numberToPolish(km)} ${kmNoun(km)}.`;
   speak(text);
 }
 

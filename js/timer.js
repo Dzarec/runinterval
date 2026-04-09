@@ -1,7 +1,6 @@
 /**
  * timer.js – Logika timera interwałowego
- * Nazwy zmiennych prywatnych mają prefiks "tmr_" żeby uniknąć kolizji
- * z innymi plikami ładowanymi jako zwykłe skrypty (wspólny scope).
+ * Timing oparty o Date.now() (nie licznik ticków) – eliminuje drift setInterval.
  */
 
 'use strict';
@@ -33,14 +32,17 @@ const PHASE_LABELS = {
   paused:   'Pauza',
 };
 
-// ── Stan (prywatny) ───────────────────────────────────────────────────────────
+// ── Stan ──────────────────────────────────────────────────────────────────────
 
-let tmr_state    = null;
-let tmr_interval = null;
-let tmr_elapsed  = 0;
-let tmr_onTick   = null;
-let tmr_onPhase  = null;
-let tmr_onFinish = null;
+let tmr_state       = null;
+let tmr_interval    = null;
+let tmr_onTick      = null;
+let tmr_onPhase     = null;
+let tmr_onFinish    = null;
+let tmr_activeStart = 0;   // wall time at start of active (non-paused) period
+let tmr_phaseStart  = 0;   // wall time at start of current phase (adjusted for pauses)
+let tmr_phaseDur    = 0;   // duration of current phase in seconds
+let tmr_pauseAt     = 0;   // wall time when paused
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
@@ -50,6 +52,11 @@ function startTimer(workout, callbacks) {
   tmr_onFinish = callbacks.onFinish;
 
   const queue = buildQueue(workout);
+  const now   = Date.now();
+
+  tmr_activeStart = now;
+  tmr_phaseStart  = now;
+  tmr_phaseDur    = queue[0].duration;
 
   tmr_state = {
     workout,
@@ -64,7 +71,6 @@ function startTimer(workout, callbacks) {
     isPaused:   false,
   };
 
-  tmr_elapsed = 0;
   startTicking();
   tmr_onPhase?.(tmr_state.phase, tmr_state);
   tmr_onTick?.(tmr_state);
@@ -72,6 +78,7 @@ function startTimer(workout, callbacks) {
 
 function pauseTimer() {
   if (!tmr_state || tmr_state.isPaused) return;
+  tmr_pauseAt         = Date.now();
   tmr_state.isPaused  = true;
   tmr_state.isRunning = false;
   stopTicking();
@@ -80,6 +87,9 @@ function pauseTimer() {
 
 function resumeTimer() {
   if (!tmr_state || !tmr_state.isPaused) return;
+  const pausedMs   = Date.now() - tmr_pauseAt;
+  tmr_activeStart += pausedMs;   // shift origin so elapsed is unchanged
+  tmr_phaseStart  += pausedMs;
   tmr_state.isPaused  = false;
   tmr_state.isRunning = true;
   startTicking();
@@ -88,12 +98,16 @@ function resumeTimer() {
 
 function stopTimer() {
   stopTicking();
-  tmr_state   = null;
-  tmr_elapsed = 0;
+  tmr_state = null;
 }
 
 function getState()        { return tmr_state; }
-function getTotalElapsed() { return tmr_elapsed; }
+
+function getTotalElapsed() {
+  if (!tmr_activeStart) return 0;
+  const base = tmr_state?.isPaused ? tmr_pauseAt : Date.now();
+  return Math.floor((base - tmr_activeStart) / 1000);
+}
 
 // ── Budowanie kolejki faz ─────────────────────────────────────────────────────
 
@@ -121,11 +135,11 @@ function buildQueue(workout) {
   return queue;
 }
 
-// ── Tick ──────────────────────────────────────────────────────────────────────
+// ── Tick (250ms interval – dokładność ±250ms zamiast ±1000ms) ────────────────
 
 function startTicking() {
   stopTicking();
-  tmr_interval = setInterval(tick, 1000);
+  tmr_interval = setInterval(tick, 250);
 }
 
 function stopTicking() {
@@ -135,12 +149,15 @@ function stopTicking() {
 function tick() {
   if (!tmr_state || !tmr_state.isRunning) return;
 
-  tmr_elapsed++;
-  tmr_state.remaining--;
+  const phaseElapsed = Math.floor((Date.now() - tmr_phaseStart) / 1000);
+  const newRemaining = Math.max(0, tmr_phaseDur - phaseElapsed);
 
+  if (newRemaining === tmr_state.remaining) return; // brak zmiany – nie odświeżaj UI
+
+  tmr_state.remaining = newRemaining;
   tmr_onTick?.(tmr_state);
 
-  if (tmr_state.remaining <= 0) advancePhase();
+  if (newRemaining <= 0) advancePhase();
 }
 
 function advancePhase() {
@@ -151,9 +168,12 @@ function advancePhase() {
     stopTicking();
     tmr_state.phase     = PHASE.DONE;
     tmr_state.isRunning = false;
-    tmr_onFinish?.({ totalElapsed: tmr_elapsed });
+    tmr_onFinish?.({ totalElapsed: getTotalElapsed() });
     return;
   }
+
+  tmr_phaseStart = Date.now();
+  tmr_phaseDur   = next.duration;
 
   tmr_state.phase      = next.phase;
   tmr_state.remaining  = next.duration;
@@ -168,8 +188,9 @@ function advancePhase() {
 // ── Helpery ───────────────────────────────────────────────────────────────────
 
 function formatCountdown(seconds) {
+  if (seconds <= 0) return '0:00';
   const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const s = Math.floor(seconds % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 

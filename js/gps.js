@@ -46,7 +46,7 @@ function startTracking() {
 function stopTracking() {
   gps_isTracking = false;
   if (gps_watchId !== null) {
-    navigator.geolocation.clearWatch(gps_watchId);
+    navigator.geolocation?.clearWatch(gps_watchId);
     gps_watchId = null;
   }
   if (gps_updateTimer) { clearInterval(gps_updateTimer); gps_updateTimer = null; }
@@ -88,10 +88,10 @@ function onPosition(pos) {
     }
   }
 
-  if (gps_points.length === 0) {
+  gps_points.push(point);
+  if (gps_points.length === 1) {
     window.WorkoutModule?.onGpsFix?.();
   }
-  gps_points.push(point);
 }
 
 function onError(err) {

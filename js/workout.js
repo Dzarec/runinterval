@@ -84,11 +84,11 @@ function startNow() {
     onFinish: handleFinish,
   });
 
-  // Licznik całkowitego czasu
+  // Licznik całkowitego czasu – oparty o Timer.getTotalElapsed() (brak driftu)
   stopTotalTimer();
   totalTimer = setInterval(() => {
     if (!isPaused) {
-      totalElapsedSec++;
+      totalElapsedSec = Timer.getTotalElapsed();
       document.getElementById('workout-total-time').textContent =
         'Czas: ' + Timer.formatTotalTime(totalElapsedSec);
     }
@@ -182,19 +182,12 @@ function handleFinish() {
   isRunning = false;
   document.getElementById('screen-workout').style.backgroundColor = '';
 
-  const dist = window.GPS ? window.GPS.getTotalDistance() : 0;
-  workoutResult.duration   = totalElapsedSec;
-  workoutResult.distance   = dist;
-  workoutResult.avgPace    = calcAvgPace(dist, totalElapsedSec);
-  workoutResult.track      = window.GPS ? window.GPS.getTrackPoints() : [];
-  workoutResult.kmSplits   = window.GPS ? window.GPS.getKmSplits()    : [];
-  workoutResult.bestKmPace = bestKm(workoutResult.kmSplits);
+  finalizeResult();
 
   window.Sound.SOUNDS.finish();
   window.Sound.VIBRATIONS.finish();
-  window.Voice.announceFinish(dist, totalElapsedSec);
+  window.Voice.announceFinish(workoutResult.distance, workoutResult.duration);
 
-  // Krótkie opóźnienie żeby głos zdążył powiedzieć komunikat przed przejściem
   setTimeout(() => {
     window.SummaryModule.show(workoutResult);
     App.navigate('summary');
@@ -233,6 +226,7 @@ function stop() {
 
 function confirmStop() {
   App.closeModal('modal-stop');
+  finalizeResult();          // capture elapsed BEFORE stopTimer nulls state
   Timer.stopTimer();
   stopTotalTimer();
   window.GPS.stopTracking();
@@ -240,14 +234,6 @@ function confirmStop() {
   isRunning = false;
   document.getElementById('screen-workout').style.backgroundColor = '';
   document.getElementById('workout-timer').classList.remove('pulse');
-
-  const dist = window.GPS ? window.GPS.getTotalDistance() : 0;
-  workoutResult.duration   = totalElapsedSec;
-  workoutResult.distance   = dist;
-  workoutResult.avgPace    = calcAvgPace(dist, totalElapsedSec);
-  workoutResult.track      = window.GPS ? window.GPS.getTrackPoints() : [];
-  workoutResult.kmSplits   = window.GPS ? window.GPS.getKmSplits()    : [];
-  workoutResult.bestKmPace = bestKm(workoutResult.kmSplits);
 
   window.SummaryModule.show(workoutResult);
   App.navigate('summary');
@@ -280,6 +266,18 @@ function calcAvgPace(distKm, durationSec) {
   return `${Math.floor(sPerKm / 60)}:${String(Math.floor(sPerKm % 60)).padStart(2, '0')}`;
 }
 
+function finalizeResult() {
+  const elapsed            = Timer.getTotalElapsed();
+  totalElapsedSec          = elapsed;
+  const dist               = window.GPS?.getTotalDistance() ?? 0;
+  workoutResult.duration   = elapsed;
+  workoutResult.distance   = dist;
+  workoutResult.avgPace    = calcAvgPace(dist, elapsed);
+  workoutResult.track      = window.GPS?.getTrackPoints() ?? [];
+  workoutResult.kmSplits   = window.GPS?.getKmSplits()    ?? [];
+  workoutResult.bestKmPace = bestKm(workoutResult.kmSplits);
+}
+
 function bestKm(splits) {
   if (!splits || !splits.length) return '--:--';
   const toSec = p => { const [m, s] = p.split(':').map(Number); return m * 60 + s; };
@@ -306,12 +304,22 @@ function renderPreviewTimeline(workout) {
     `<div class="workout-preview-bar-segment"
           style="width:${(dur/total*100).toFixed(2)}%;background:${color}"></div>`;
 
+  // Jeśli zbyt wiele segmentów (dużo powtórzeń), pokaż widok zagregowany
+  const totalSegs = (w ? 1 : 0) + (c ? 1 : 0) +
+    (workout.intervals || []).reduce((s, b) => s + (b.fast > 0 ? 2 : 1) * b.repeats, 0);
+  const aggregate = totalSegs > 40;
+
   let html = '';
   if (w) html += seg(w, 'var(--phase-warmup)');
   (workout.intervals || []).forEach(b => {
-    for (let i = 0; i < b.repeats; i++) {
-      if (b.fast > 0) html += seg(b.fast, 'var(--phase-fast)');
-      html += seg(b.slow, 'var(--phase-slow)');
+    if (aggregate) {
+      if (b.fast > 0) html += seg(b.fast * b.repeats, 'var(--phase-fast)');
+      if (b.slow > 0) html += seg(b.slow * b.repeats, 'var(--phase-slow)');
+    } else {
+      for (let i = 0; i < b.repeats; i++) {
+        if (b.fast > 0) html += seg(b.fast, 'var(--phase-fast)');
+        if (b.slow > 0) html += seg(b.slow, 'var(--phase-slow)');
+      }
     }
   });
   if (c) html += seg(c, 'var(--phase-cooldown)');
