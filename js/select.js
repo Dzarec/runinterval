@@ -131,11 +131,16 @@ function editWorkout(id) {
 
 function deleteWorkout(id) {
   App.closeModal('modal-custom-menu');
-  if (confirm('Usunąć ten trening?')) {
-    window.Storage.deleteCustomWorkout(id);
-    renderCustomWorkouts();
-    App.showToast('Trening usunięty');
-  }
+  App.confirmModal(
+    'Usunąć trening?',
+    'Tej operacji nie można cofnąć.',
+    'Tak, usuń',
+    () => {
+      window.Storage.deleteCustomWorkout(id);
+      renderCustomWorkouts();
+      App.showToast('Trening usunięty');
+    }
+  );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -95,11 +95,17 @@ function showDetail(id) {
 // ── Usuń wpis ─────────────────────────────────────────────────────────────────
 
 function deleteEntry(id) {
-  if (!confirm('Usunąć ten trening? Tej operacji nie można cofnąć.')) return;
-  window.Storage?.deleteHistoryEntry(id);
-  App.closeModal('modal-detail');
-  App.showToast('Trening usunięty.');
-  renderHistoryScreen();
+  App.confirmModal(
+    'Usunąć trening?',
+    'Tej operacji nie można cofnąć.',
+    'Tak, usuń',
+    () => {
+      window.Storage?.deleteHistoryEntry(id);
+      App.closeModal('modal-detail');
+      App.showToast('Trening usunięty.');
+      renderHistoryScreen();
+    }
+  );
 }
 
 // ── Eksport / Import ──────────────────────────────────────────────────────────
@@ -116,11 +122,20 @@ function triggerImport() {
 function importData(fileInput) {
   const file = fileInput.files?.[0];
   if (!file) return;
-  window.Storage?.importAllData(file, () => {
-    renderHistoryScreen();
-    App.showToast('Import zakończony!');
-  });
   fileInput.value = '';
+
+  App.confirmModal(
+    'Zaimportować dane?',
+    'Obecne dane zostaną nadpisane.',
+    'Tak, importuj',
+    () => {
+      window.Storage?.importAllData(
+        file,
+        () => { renderHistoryScreen(); App.showToast('Import zakończony!'); },
+        (msg) => App.showToast(msg)
+      );
+    }
+  );
 }
 
 // ── Helpery ───────────────────────────────────────────────────────────────────

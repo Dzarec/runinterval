@@ -344,6 +344,20 @@
     </div>
   </div>
 
+  <!-- ── Generic confirm modal ── -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal-box">
+      <div class="modal-title" id="modal-confirm-title"></div>
+      <div class="modal-text" id="modal-confirm-text"></div>
+      <button class="btn" id="modal-confirm-ok"
+              style="color:var(--accent);border:1px solid var(--accent);background:transparent">
+      </button>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-confirm')">
+        Anuluj
+      </button>
+    </div>
+  </div>
+
   <!-- ── Discard confirmation modal ── -->
   <div class="modal-overlay" id="modal-discard">
     <div class="modal-box">

@@ -70,6 +70,15 @@ function closeModal(id) {
   document.getElementById(id)?.classList.remove('open');
 }
 
+function confirmModal(title, text, okLabel, onConfirm) {
+  document.getElementById('modal-confirm-title').textContent = title;
+  document.getElementById('modal-confirm-text').textContent  = text;
+  const okBtn = document.getElementById('modal-confirm-ok');
+  okBtn.textContent = okLabel;
+  okBtn.onclick = () => { closeModal('modal-confirm'); onConfirm(); };
+  openModal('modal-confirm');
+}
+
 // ── iOS Install Banner ────────────────────────────────────────────────────────
 
 function maybeShowIosBanner() {
@@ -123,4 +132,5 @@ window.App = {
   showToast,
   openModal,
   closeModal,
+  confirmModal,
 };

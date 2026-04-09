@@ -144,12 +144,18 @@ function announceFinish(distanceKm, durationSec) {
   window.Sound?.VIBRATIONS?.finish();
 }
 
+function kmNoun(n) {
+  if (n === 1)       return 'kilometr';
+  if (n <= 4)        return 'kilometry';
+  return 'kilometrów';
+}
+
 function announceKilometer(km, paceStr) {
-  const kmWord  = numberToPolish(km);
+  const kmWord   = numberToPolish(km);
   const paceWord = paceToWords(paceStr);
   const text = paceWord
-    ? `${kmWord} ${km === 1 ? 'kilometr' : 'kilometry'}. Tempo: ${paceWord}.`
-    : `${kmWord} ${km === 1 ? 'kilometr' : 'kilometry'}.`;
+    ? `${kmWord} ${kmNoun(km)}. Tempo: ${paceWord}.`
+    : `${kmWord} ${kmNoun(km)}.`;
   speak(text);
 }
 

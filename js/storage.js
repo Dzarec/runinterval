@@ -88,22 +88,20 @@ function exportAllData() {
   URL.revokeObjectURL(url);
 }
 
-function importAllData(file, onDone) {
+function importAllData(file, onDone, onError) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
       if (data.version && Array.isArray(data.customWorkouts) && Array.isArray(data.history)) {
-        if (confirm('Zaimportować dane? Obecne dane zostaną nadpisane.')) {
-          saveData(KEYS.CUSTOM_WORKOUTS, data.customWorkouts);
-          saveData(KEYS.HISTORY, data.history);
-          if (onDone) onDone();
-        }
+        saveData(KEYS.CUSTOM_WORKOUTS, data.customWorkouts);
+        saveData(KEYS.HISTORY, data.history);
+        if (onDone) onDone();
       } else {
-        alert('Nieprawidłowy format pliku.');
+        if (onError) onError('Nieprawidłowy format pliku.');
       }
     } catch {
-      alert('Błąd odczytu pliku.');
+      if (onError) onError('Błąd odczytu pliku.');
     }
   };
   reader.readAsText(file);

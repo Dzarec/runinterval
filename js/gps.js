@@ -60,8 +60,8 @@ function onPosition(pos) {
 
   const { latitude, longitude, accuracy } = pos.coords;
 
-  // Odrzuć bardzo słabą dokładność (na desktop accuracy może być 500-1000m)
-  if (accuracy > 500) return;
+  // Odrzuć bardzo słabą dokładność (WiFi ~50m, IP-based ~500m+)
+  if (accuracy > 100) return;
 
   const point = { lat: latitude, lng: longitude, time: Date.now() };
 
@@ -69,10 +69,10 @@ function onPosition(pos) {
     const prev = gps_points[gps_points.length - 1];
     const dist = haversine(prev.lat, prev.lng, latitude, longitude);
 
-    // Odrzuć szum (< 1m) i nierealistyczne skoki (> 50 m/s)
-    if (dist < 1) return;
+    // Odrzuć szum (< 3m) i nierealistyczne skoki (> 15 m/s = 54 km/h)
+    if (dist < 3) return;
     const dt = (point.time - prev.time) / 1000;
-    if (dt > 0 && dist / dt > 50) return;
+    if (dt > 0 && dist / dt > 15) return;
 
     gps_totalDist += dist;
 
@@ -116,12 +116,13 @@ function getCurrentPace() {
   const recent = gps_points.filter(p => now - p.time < 30000);
   if (recent.length < 2) return '--:--';
 
-  const first = recent[0];
-  const last  = recent[recent.length - 1];
-  const dist  = haversine(first.lat, first.lng, last.lat, last.lng);
+  let dist = 0;
+  for (let i = 1; i < recent.length; i++) {
+    dist += haversine(recent[i-1].lat, recent[i-1].lng, recent[i].lat, recent[i].lng);
+  }
   if (dist < 5) return '--:--';
 
-  const time = (last.time - first.time) / 1000;
+  const time = (recent[recent.length - 1].time - recent[0].time) / 1000;
   return formatPace(time / (dist / 1000));
 }
 

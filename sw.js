@@ -1,4 +1,4 @@
-const CACHE_NAME = 'runinterval-v8';
+const CACHE_NAME = 'runinterval-v9';
 const ASSETS = [
   './',
   './index.html',

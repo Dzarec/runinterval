@@ -133,6 +133,10 @@ function handlePhaseChange(phase, state) {
     window.Sound.SOUNDS.fastStart();
     window.Sound.VIBRATIONS.phaseChange();
     window.Voice.announcePhase('fast');
+    if (state) {
+      window.Voice.announceHalfway(state.currentRep, state.totalReps);
+      window.Voice.announceLastRep(state.currentRep, state.totalReps);
+    }
   } else if (phase === Timer.PHASE.SLOW) {
     window.Sound.SOUNDS.slowStart();
     window.Sound.VIBRATIONS.phaseChange();
