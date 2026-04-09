@@ -33,10 +33,13 @@ function prepareWorkout(workout) {
   document.getElementById('workout-distance').textContent       = '0.00 km';
   document.getElementById('workout-pace').textContent           = '--:--';
   document.getElementById('workout-stats-row').style.visibility = 'hidden';
+  document.getElementById('gps-status').style.display           = 'none';
   document.getElementById('screen-workout').style.backgroundColor = '';
   document.getElementById('btn-start').style.display            = '';
   document.getElementById('btn-pause-resume').style.display     = 'none';
   document.getElementById('btn-stop').style.display             = 'none';
+
+  renderPreviewTimeline(workout);
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
@@ -57,6 +60,8 @@ function startNow() {
   document.getElementById('btn-stop').style.display             = '';
   document.getElementById('btn-pause-resume').innerHTML         = '⏸ Pauza';
   document.getElementById('workout-stats-row').style.visibility = 'visible';
+  document.getElementById('gps-status').style.display           = 'block';
+  document.getElementById('workout-preview').style.display      = 'none';
 
   workoutResult = {
     id:          window.Storage.generateId('history'),
@@ -281,6 +286,49 @@ function bestKm(splits) {
   return [...splits].sort((a, b) => toSec(a) - toSec(b))[0];
 }
 
+function renderPreviewTimeline(workout) {
+  const bar  = document.getElementById('workout-preview-bar');
+  const info = document.getElementById('workout-preview-time');
+  const prev = document.getElementById('workout-preview');
+  if (!bar || !workout) return;
+
+  prev.style.display = '';
+
+  const w = workout.warmup  || 0;
+  const c = workout.cooldown || 0;
+  const intervalTime = (workout.intervals || []).reduce(
+    (s, b) => s + (b.fast + b.slow) * b.repeats, 0
+  );
+  const total = w + intervalTime + c;
+  if (total === 0) { prev.style.display = 'none'; return; }
+
+  const seg = (dur, color) =>
+    `<div class="workout-preview-bar-segment"
+          style="width:${(dur/total*100).toFixed(2)}%;background:${color}"></div>`;
+
+  let html = '';
+  if (w) html += seg(w, 'var(--phase-warmup)');
+  (workout.intervals || []).forEach(b => {
+    for (let i = 0; i < b.repeats; i++) {
+      if (b.fast > 0) html += seg(b.fast, 'var(--phase-fast)');
+      html += seg(b.slow, 'var(--phase-slow)');
+    }
+  });
+  if (c) html += seg(c, 'var(--phase-cooldown)');
+
+  bar.innerHTML  = html;
+  info.textContent = window.WorkoutsData
+    ? window.WorkoutsData.formatDuration(total)
+    : `~${Math.round(total/60)} min`;
+}
+
+function onGpsFix() {
+  const el = document.getElementById('gps-status');
+  if (!el) return;
+  el.textContent = '📡 GPS: aktywny';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 function onScreenEnter() {
@@ -300,5 +348,6 @@ window.WorkoutModule = {
   confirmStop,
   goBack,
   updateGpsDisplay,
+  onGpsFix,
   hasPending() { return pendingWorkout !== null; },
 };

@@ -4,13 +4,40 @@
 
 'use strict';
 
+let hist_sortOrder = 'newest';
+
+// ── Sortowanie ────────────────────────────────────────────────────────────────
+
+function setSortOrder(order) {
+  hist_sortOrder = order;
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sort === order);
+  });
+  renderHistoryScreen();
+}
+
+function getSorted(history) {
+  switch (hist_sortOrder) {
+    case 'oldest':  return [...history].reverse();
+    case 'longest': return [...history].sort((a, b) => (b.distance || 0) - (a.distance || 0));
+    case 'fastest': return [...history].sort((a, b) => paceToSec(a.avgPace) - paceToSec(b.avgPace));
+    default:        return history;
+  }
+}
+
+function paceToSec(pace) {
+  if (!pace || pace === '--:--') return 99999;
+  const [m, s] = pace.split(':').map(Number);
+  return m * 60 + (s || 0);
+}
+
 // ── Lista ─────────────────────────────────────────────────────────────────────
 
 function renderHistoryScreen() {
   const list = document.getElementById('history-list');
   if (!list) return;
 
-  const history = window.Storage?.getHistory() || [];
+  const history = getSorted(window.Storage?.getHistory() || []);
 
   if (history.length === 0) {
     list.innerHTML =
@@ -95,6 +122,9 @@ function showDetail(id) {
 // ── Usuń wpis ─────────────────────────────────────────────────────────────────
 
 function deleteEntry(id) {
+  const scrollEl  = document.querySelector('#screen-history .scroll-content');
+  const scrollPos = scrollEl?.scrollTop || 0;
+
   App.confirmModal(
     'Usunąć trening?',
     'Tej operacji nie można cofnąć.',
@@ -104,6 +134,7 @@ function deleteEntry(id) {
       App.closeModal('modal-detail');
       App.showToast('Trening usunięty.');
       renderHistoryScreen();
+      requestAnimationFrame(() => { if (scrollEl) scrollEl.scrollTop = scrollPos; });
     }
   );
 }
@@ -167,6 +198,7 @@ function escHtml(str) {
 
 window.HistoryModule = {
   renderHistoryScreen,
+  setSortOrder,
   showDetail,
   deleteEntry,
   exportData,

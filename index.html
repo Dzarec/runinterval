@@ -35,6 +35,8 @@
         <div class="logo-tagline">Trening interwałowy z głosowym coachem</div>
       </div>
 
+      <div id="home-stats" class="home-stats"></div>
+
       <button class="btn btn-primary" onclick="App.goSelect()">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
           <polygon points="5,3 19,12 5,21"/>
@@ -196,6 +198,15 @@
       </div>
     </div>
 
+    <!-- Status GPS (widoczny po starcie, znika po pierwszym fixie) -->
+    <div id="gps-status" class="gps-status" style="display:none">📡 GPS: szukam...</div>
+
+    <!-- Podgląd treningu (widoczny PRZED startem) -->
+    <div id="workout-preview" class="workout-preview">
+      <div id="workout-preview-bar" class="workout-preview-bar"></div>
+      <div id="workout-preview-time" class="workout-preview-time"></div>
+    </div>
+
     <!-- Główna sekcja timera -->
     <div class="workout-main">
       <div class="workout-phase-name" id="workout-phase-name">Gotowy?</div>
@@ -301,6 +312,14 @@
     </div>
 
     <div class="scroll-content">
+
+      <!-- Sortowanie -->
+      <div class="sort-bar">
+        <button class="sort-btn active" data-sort="newest"  onclick="HistoryModule.setSortOrder('newest')">Najnowsze</button>
+        <button class="sort-btn"        data-sort="oldest"  onclick="HistoryModule.setSortOrder('oldest')">Najstarsze</button>
+        <button class="sort-btn"        data-sort="longest" onclick="HistoryModule.setSortOrder('longest')">Dystans</button>
+        <button class="sort-btn"        data-sort="fastest" onclick="HistoryModule.setSortOrder('fastest')">Tempo</button>
+      </div>
 
       <div id="history-list">
         <!-- wypełniane przez JS -->

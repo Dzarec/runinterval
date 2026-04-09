@@ -17,6 +17,7 @@ function showScreen(name) {
   });
 
   // Lifecycle hooks
+  if (name === 'home')    renderHomeStats();
   if (name === 'workout') window.WorkoutModule?.onScreenEnter?.();
   if (name === 'select')  window.SelectModule?.renderSelectScreen();
   if (name === 'creator') window.CreatorModule?.initCreatorIfNew();
@@ -77,6 +78,18 @@ function confirmModal(title, text, okLabel, onConfirm) {
   okBtn.textContent = okLabel;
   okBtn.onclick = () => { closeModal('modal-confirm'); onConfirm(); };
   openModal('modal-confirm');
+}
+
+// ── Home stats ────────────────────────────────────────────────────────────────
+
+function renderHomeStats() {
+  const el = document.getElementById('home-stats');
+  if (!el) return;
+  const history = window.Storage?.getHistory() || [];
+  if (history.length === 0) { el.textContent = ''; return; }
+  const totalKm  = history.reduce((s, e) => s + (e.distance || 0), 0);
+  const wWord    = history.length === 1 ? 'trening' : history.length <= 4 ? 'treningi' : 'treningów';
+  el.textContent = `${history.length} ${wWord} · ${totalKm.toFixed(1)} km łącznie`;
 }
 
 // ── iOS Install Banner ────────────────────────────────────────────────────────

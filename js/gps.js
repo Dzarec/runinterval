@@ -88,6 +88,9 @@ function onPosition(pos) {
     }
   }
 
+  if (gps_points.length === 0) {
+    window.WorkoutModule?.onGpsFix?.();
+  }
   gps_points.push(point);
 }
 
