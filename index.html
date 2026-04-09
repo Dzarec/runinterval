@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RunInterval">
+  <meta name="description" content="Trening interwałowy z głosowym coachem">
+
+  <title>RunInterval</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Leaflet (faza 6) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║  EKRAN 1 – HOME                      ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <section id="screen-home" class="screen active">
+    <div class="home-content">
+
+      <div class="home-logo">
+        <span class="logo-icon">🏃</span>
+        <div class="logo-text">Run<span>Interval</span></div>
+        <div class="logo-tagline">Trening interwałowy z głosowym coachem</div>
+      </div>
+
+      <button class="btn btn-primary" onclick="App.goSelect()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5,3 19,12 5,21"/>
+        </svg>
+        Rozpocznij trening
+      </button>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="App.goSelect()">
+          📋 Moje treningi
+        </button>
+        <button class="btn btn-secondary" onclick="App.goCreator()">
+          ✏️ Kreator treningu
+        </button>
+      </div>
+
+      <button class="btn btn-secondary" onclick="App.goHistory()">
+        📊 Historia
+      </button>
+
+    </div>
+  </section><!-- /#screen-home -->
+
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║  EKRAN 2 – SELECT                    ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <section id="screen-select" class="screen">
+
+    <div class="topbar">
+      <button class="btn-back" onclick="App.goHome()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Powrót
+      </button>
+      <span class="topbar-title">Wybierz trening</span>
+      <div style="width:70px"></div><!-- spacer -->
+    </div>
+
+    <div class="scroll-content">
+
+      <div class="section-label">Gotowe plany</div>
+      <div id="preset-list">
+        <!-- wypełniane przez JS -->
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="divider" style="margin: 8px 0"></div>
+      <div class="section-label">Moje treningi</div>
+      <div id="custom-workout-list">
+        <!-- wypełniane przez JS -->
+      </div>
+
+    </div>
+  </section><!-- /#screen-select -->
+
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║  EKRAN 3 – CREATOR                   ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <section id="screen-creator" class="screen">
+
+    <div class="topbar">
+      <button class="btn-back" onclick="App.goHome()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Powrót
+      </button>
+      <span class="topbar-title">Kreator treningu</span>
+      <div style="width:70px"></div>
+    </div>
+
+    <div class="scroll-content">
+
+      <!-- Nazwa -->
+      <div class="form-group">
+        <label class="form-label" for="creator-name">Nazwa treningu</label>
+        <input id="creator-name" class="form-input" type="text"
+               placeholder="np. Moje interwały" maxlength="50">
+      </div>
+
+      <!-- Rozgrzewka -->
+      <div class="form-group">
+        <div class="form-row">
+          <label class="form-label" for="creator-warmup">Rozgrzewka</label>
+          <input id="creator-warmup" class="form-input" type="number"
+                 min="0" max="10" value="5"> min
+        </div>
+      </div>
+
+      <!-- Bloki interwałów -->
+      <div id="interval-blocks-container">
+        <!-- bloki generowane przez JS -->
+      </div>
+
+      <button class="btn btn-secondary" id="btn-add-block" onclick="CreatorModule.addBlock()">
+        + Dodaj blok interwałowy
+      </button>
+
+      <!-- Schładzanie -->
+      <div class="form-group">
+        <div class="form-row">
+          <label class="form-label" for="creator-cooldown">Schładzanie</label>
+          <input id="creator-cooldown" class="form-input" type="number"
+                 min="0" max="10" value="3"> min
+        </div>
+      </div>
+
+      <!-- Podgląd -->
+      <div class="form-group">
+        <div class="section-label">Podgląd treningu</div>
+        <div id="timeline-preview" class="timeline-preview" style="height:28px; border-radius:8px; overflow:hidden; display:flex; background:var(--border)">
+          <!-- segmenty generowane przez JS -->
+        </div>
+        <div id="estimated-time" class="text-muted mt-4" style="font-size:0.9rem; text-align:right">
+          Szacowany czas: —
+        </div>
+      </div>
+
+      <!-- Zapisz -->
+      <button class="btn btn-primary mt-8" onclick="CreatorModule.save()">
+        💾 Zapisz trening
+      </button>
+
+    </div>
+  </section><!-- /#screen-creator -->
+
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║  EKRAN 4 – WORKOUT (aktywny trening) ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <section id="screen-workout" class="screen">
+
+    <!-- Topbar z nazwą treningu i przyciskiem wstecz -->
+    <div class="workout-topbar" id="workout-topbar">
+      <button class="btn-back" onclick="WorkoutModule.goBack()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <span id="workout-name-label" class="workout-name-label">—</span>
+      <div style="width:36px"></div>
+    </div>
+
+    <!-- Dystans + tempo (ukryte przed startem) -->
+    <div class="workout-stats-row" id="workout-stats-row" style="visibility:hidden">
+      <div class="workout-stat">
+        <div class="workout-stat-value" id="workout-distance">0.00 km</div>
+        <div class="workout-stat-label">Dystans</div>
+      </div>
+      <div class="workout-stat">
+        <div class="workout-stat-value" id="workout-pace">--:--</div>
+        <div class="workout-stat-label">Tempo /km</div>
+      </div>
+    </div>
+
+    <!-- Główna sekcja timera -->
+    <div class="workout-main">
+      <div class="workout-phase-name" id="workout-phase-name">Gotowy?</div>
+      <div class="workout-timer"      id="workout-timer">—</div>
+      <div class="workout-series"     id="workout-series"></div>
+      <div class="workout-total-time" id="workout-total-time">Czas: 0:00</div>
+    </div>
+
+    <!-- Przyciski: przed startem / w trakcie -->
+    <div class="workout-controls">
+
+      <!-- Widoczne PRZED startem -->
+      <button class="btn btn-start" id="btn-start" onclick="WorkoutModule.startNow()"
+              style="grid-column: 1 / -1; background:#2ea043; font-size:1.3rem; min-height:72px;">
+        ▶ START
+      </button>
+
+      <!-- Widoczne W TRAKCIE (ukryte przed startem) -->
+      <button class="btn" id="btn-pause-resume" onclick="WorkoutModule.togglePause()"
+              style="display:none">
+        ⏸ Pauza
+      </button>
+      <button class="btn" id="btn-stop" onclick="WorkoutModule.stop()"
+              style="display:none">
+        ⏹ Stop
+      </button>
+
+    </div>
+
+  </section><!-- /#screen-workout -->
+
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║  EKRAN 5 – SUMMARY                   ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <section id="screen-summary" class="screen">
+
+    <div class="topbar" style="border-bottom:none">
+      <div style="width:70px"></div>
+      <span class="topbar-title">Trening zakończony! 🎉</span>
+      <div style="width:70px"></div>
+    </div>
+
+    <div class="scroll-content">
+
+      <!-- Mapa -->
+      <div id="summary-map" class="map-container"></div>
+
+      <!-- Statystyki -->
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-box-value" id="summary-distance">—</div>
+          <div class="stat-box-label">Dystans</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-value" id="summary-duration">—</div>
+          <div class="stat-box-label">Czas</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-value" id="summary-avg-pace">—</div>
+          <div class="stat-box-label">Śr. tempo /km</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-value" id="summary-best-km">—</div>
+          <div class="stat-box-label">Najlepszy km</div>
+        </div>
+      </div>
+
+      <!-- Splits -->
+      <div>
+        <div class="section-label">Tempo na km</div>
+        <div id="summary-splits" class="km-splits-list">
+          <p class="text-muted" style="font-size:0.9rem; padding:8px 0">Brak danych GPS</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="SummaryModule.save()">
+        💾 Zapisz
+      </button>
+      <button class="btn btn-danger" onclick="SummaryModule.discard()">
+        🗑️ Odrzuć
+      </button>
+
+    </div>
+  </section><!-- /#screen-summary -->
+
+
+  <!-- ╔══════════════════════════════════════╗ -->
+  <!-- ║  EKRAN 6 – HISTORY                   ║ -->
+  <!-- ╚══════════════════════════════════════╝ -->
+  <section id="screen-history" class="screen">
+
+    <div class="topbar">
+      <button class="btn-back" onclick="App.goHome()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Powrót
+      </button>
+      <span class="topbar-title">Historia</span>
+      <div style="width:70px"></div>
+    </div>
+
+    <div class="scroll-content">
+
+      <div id="history-list">
+        <!-- wypełniane przez JS -->
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="divider" style="margin: 8px 0"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="HistoryModule.exportData()">
+          📤 Eksport
+        </button>
+        <button class="btn btn-secondary" onclick="HistoryModule.triggerImport()">
+          📥 Import
+        </button>
+      </div>
+      <input type="file" id="import-file-input" accept=".json"
+             style="display:none" onchange="HistoryModule.importData(this)">
+
+    </div>
+  </section><!-- /#screen-history -->
+
+
+  <!-- ── Phase flash overlay ── -->
+  <div class="phase-flash" id="phase-flash"></div>
+
+  <!-- ── Toast ── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── Stop confirmation modal ── -->
+  <div class="modal-overlay" id="modal-stop">
+    <div class="modal-box">
+      <div class="modal-title">Zakończyć trening?</div>
+      <div class="modal-text">Postęp zostanie zapisany do podsumowania.</div>
+      <button class="btn btn-primary" onclick="WorkoutModule.confirmStop()">
+        Tak, zakończ
+      </button>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-stop')">
+        Kontynuuj trening
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Discard confirmation modal ── -->
+  <div class="modal-overlay" id="modal-discard">
+    <div class="modal-box">
+      <div class="modal-title">Odrzucić trening?</div>
+      <div class="modal-text">Dane zostaną usunięte i nie będzie możliwości ich odzyskania.</div>
+      <button class="btn btn-danger" style="background:var(--accent); color:#fff"
+              onclick="SummaryModule.confirmDiscard()">
+        Tak, odrzuć
+      </button>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-discard')">
+        Anuluj
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Workout detail modal (history) ── -->
+  <div class="modal-overlay" id="modal-detail">
+    <div class="modal-box" style="max-height:90dvh; overflow-y:auto">
+      <div id="modal-detail-content"><!-- filled by JS --></div>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-detail')">
+        Zamknij
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Custom workout context menu ── -->
+  <div class="modal-overlay" id="modal-custom-menu">
+    <div class="modal-box">
+      <div id="custom-menu-content"><!-- filled by SelectModule --></div>
+    </div>
+  </div>
+
+</div><!-- /.app-container -->
+
+<!-- ── Scripts ── -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="js/storage.js"></script>
+<script src="js/workouts.js"></script>
+<script src="js/timer.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/voice.js"></script>
+<script src="js/gps.js"></script>
+<script src="js/map.js"></script>
+<script src="js/workout.js"></script>
+<script src="js/summary.js"></script>
+<script src="js/history.js"></script>
+<script src="js/select.js"></script>
+<script src="js/creator.js"></script>
+<script src="js/app.js"></script>
+
+
+</body>
+</html>
